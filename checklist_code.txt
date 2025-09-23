@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+# Configuration
+CHECKLIST_FILE="$HOME/.config/checklist.txt"
+COMPLETED_FILE="$HOME/.config/checklist_completed.txt"
+THEME_FILE="$HOME/.config/rofi/themes/checklist.rasi"
+
+# Initialize checklist
+if [[ ! -f "$CHECKLIST_FILE" ]]; then
+    cat > "$CHECKLIST_FILE" << 'EOF'
+Buy groceries
+Complete project documentation
+Schedule dentist appointment
+Update system packages
+Review code changes
+Plan weekend activities
+Call family members
+Read technical articles
+EOF
+fi
+
+# Main function - handles both adding and completing tasks
+main_checklist() {
+    total_items=$(wc -l < "$CHECKLIST_FILE" 2>/dev/null || echo 0)
+    
+    if [[ $total_items -eq 0 ]]; then
+        # If no tasks, show input for adding
+        new_task=$(echo "" | rofi -dmenu -theme "$THEME_FILE" \
+            -p "➕ Add Task" \
+            -mesg "Type your first task and press Enter")
+        
+        if [[ -n "$new_task" ]]; then
+            echo "$new_task" >> "$CHECKLIST_FILE"
+            notify-send "✅ Task Added" "$new_task" -t 2000
+            # Show the list again
+            main_checklist
+        fi
+        return
+    fi
+    
+    # Combine add option with existing tasks
+    task_list="➕ Add New Task
+$(cat "$CHECKLIST_FILE")"
+    
+    selected=$(echo "$task_list" | rofi -dmenu -multi-select \
+        -theme "$THEME_FILE" \
+        -p "📋 Tasks ($total_items)" \
+        -mesg "Select '➕ Add New Task' to add • Select tasks to complete • Ctrl+Space for multiple")
+    
+    if [[ -n "$selected" ]]; then
+        # Check if user wants to add a new task
+        if echo "$selected" | grep -q "➕ Add New Task"; then
+            new_task=$(echo "" | rofi -dmenu -theme "$THEME_FILE" \
+                -p "➕ Add Task" \
+                -mesg "Type your new task and press Enter")
+            
+            if [[ -n "$new_task" ]]; then
+                echo "$new_task" >> "$CHECKLIST_FILE"
+                notify-send "✅ Task Added" "$new_task" -t 2000
+            fi
+            
+            # Remove the "Add New Task" line from selected items
+            selected=$(echo "$selected" | grep -v "➕ Add New Task")
+        fi
+        
+        # Process completed tasks
+        if [[ -n "$selected" ]]; then
+            completed_count=0
+            while IFS= read -r task; do
+                if [[ -n "$task" && "$task" != "➕ Add New Task" ]]; then
+                    # Add to completed with timestamp
+                    echo "$(date '+%Y-%m-%d %H:%M') - $task" >> "$COMPLETED_FILE"
+                    # Remove from active list
+                    temp_file=$(mktemp)
+                    grep -Fvx "$task" "$CHECKLIST_FILE" > "$temp_file"
+                    mv "$temp_file" "$CHECKLIST_FILE"
+                    ((completed_count++))
+                fi
+            done <<< "$selected"
+            
+            if [[ $completed_count -gt 0 ]]; then
+                remaining=$(wc -l < "$CHECKLIST_FILE" 2>/dev/null || echo 0)
+                notify-send "🎉 Completed!" "$completed_count tasks done • $remaining remaining" -t 2500
+            fi
+        fi
+    fi
+}
+
+# Menu for additional options
+show_menu() {
+    menu="📋 Manage Tasks
+✅ View Completed
+🗑️ Clear All Tasks"
+
+    choice=$(echo "$menu" | rofi -dmenu -theme "$THEME_FILE" \
+        -p "📋 Task Manager" \
+        -mesg "Choose an action")
+    
+    case "$choice" in
+        "📋 Manage Tasks") main_checklist ;;
+        "✅ View Completed")
+            if [[ -f "$COMPLETED_FILE" && -s "$COMPLETED_FILE" ]]; then
+                cat "$COMPLETED_FILE" | rofi -dmenu -theme "$THEME_FILE" \
+                    -p "✅ Completed Tasks" \
+                    -mesg "Previously completed tasks" \
+                    -kb-accept-entry ""
+            else
+                echo "No completed tasks yet!" | rofi -dmenu -theme "$THEME_FILE" \
+                    -p "✅ Completed" \
+                    -kb-accept-entry ""
+            fi
+            ;;
+        "🗑️ Clear All Tasks")
+            confirm=$(echo -e "Yes, clear all\nCancel" | rofi -dmenu -theme "$THEME_FILE" \
+                -p "⚠️ Clear All?" \
+                -mesg "This will delete all tasks!")
+            if [[ "$confirm" == "Yes, clear all" ]]; then
+                > "$CHECKLIST_FILE"
+                notify-send "🗑️ Cleared" "All tasks removed" -t 2000
+            fi
+            ;;
+    esac
+}
+
+# Handle arguments
+case "$1" in
+    "menu") show_menu ;;
+    *) main_checklist ;;
+esac
+

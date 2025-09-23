@@ -1,0 +1,85 @@
+/* Save this as checklist-input.rasi */
+* {
+    background-color: #00000070;
+    text-color: #ffffff;
+    font: "monospace 14";
+}
+
+window {
+    background-color: #00000085;
+    border: 1px;
+    border-color: #ffffff15;
+    border-radius: 8px;
+    width: 600px;
+    height: 300px;
+    location: center;
+    anchor: center;
+    transparency: "real";
+}
+
+mainbox {
+    children: [inputbar, listview, message];
+    spacing: 8px;
+    padding: 15px;
+}
+
+inputbar {
+    background-color: #ffffff10;
+    border: 1px;
+    border-color: #ffffff25;
+    border-radius: 5px;
+    padding: 8px 10px;
+    spacing: 8px;
+}
+
+prompt {
+    text-color: #98FB98;
+    font: "monospace 15";
+}
+
+entry {
+    text-color: #ffffff;
+    font: "monospace 14";
+    placeholder-color: #ffffff50;
+}
+
+listview {
+    columns: 1;
+    lines: 3;
+    spacing: 3px;
+}
+
+element {
+    padding: 4px 8px;
+    border-radius: 3px;
+    font: "monospace 14";
+    border: 1px;
+    border-color: transparent;
+}
+
+element selected.normal {
+    background-color: transparent;
+    text-color: #ffffff;
+    border: 2px;
+    border-color: #90EE90;
+}
+
+element alternate.normal {
+    background-color: #ffffff03;
+    border-color: transparent;
+}
+
+element normal.normal {
+    background-color: #ffffff02;
+    border-color: transparent;
+}
+
+message {
+    background-color: #ffffff06;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font: "monospace 12";
+    text-color: #ffffff;
+}
+
+
